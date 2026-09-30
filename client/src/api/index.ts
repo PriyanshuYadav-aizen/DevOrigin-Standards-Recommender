@@ -43,8 +43,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      response.ok
+        ? 'The API is not available on this deployment.'
+        : `Request failed (${response.status})`,
+    );
+  }
+
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`);
+  if (!response.ok) {
+    const message =
+      typeof body === 'object' && body !== null && 'error' in body
+        ? String(body.error)
+        : `Request failed (${response.status})`;
+    throw new Error(message);
+  }
   return body as T;
 }
 
