@@ -1,0 +1,44 @@
+Build an MVP web app called "DevOrigin – Standards Recommender" using the MERN stack (MongoDB, Express.js, React.js, Node.js) with Google Gemini API integration. This is a Smart India Hackathon prototype for Problem Statement SIH26108: "AI-Powered Recommendation Engine for Identifying Applicable Indian Standards for Procurement Specifications."
+
+CORE CONCEPT:
+A procurement/tender-drafting officer types a plain-language requirement (e.g. "steel rods for building construction" or pastes a short tender description). The app returns the applicable Indian Standards (IS codes), related test methods/allied codes, mandatory certifications (BIS/ISI/QCO), a confidence score, and a short plain-language explanation — instead of the officer manually searching through standards manuals.
+
+TECH STACK:
+- Frontend: React.js (with plain CSS or Tailwind, functional components + hooks)
+- Backend: Node.js + Express.js REST API
+- Database: MongoDB (Mongoose) — store: (a) a curated "standards" collection, (b) a "queries" collection logging each search + result for an audit trail
+- AI: Google Gemini API (gemini-1.5-flash or gemini-2.0-flash for cost/speed) called from the Node backend only (never expose the API key to the frontend)
+
+DATA MODEL (MongoDB):
+1. Standard document: { standardNumber, title, category (e.g. "steel", "cement", "electrical"), testMethods: [string], alliedCodes: [string], certificationRequired: [string] (e.g. "ISI Mark", "BIS QCO"), edition, status ("current"/"superseded"), supersededBy (optional) }
+2. Query log document: { inputText, matchedStandards: [standardNumber], confidenceScore, reasoning, needsReview (boolean), timestamp }
+
+SEED DATA:
+Seed the "standards" collection with ~15-20 realistic sample Indian Standards across 3 categories: steel/reinforcement, cement, and electrical wiring/cables. Use plausible IS numbers, titles, test methods and certification requirements (this is a demo dataset, not scraped from BIS — make it clearly illustrative but structurally realistic).
+
+CORE FLOW (MVP — keep it simple, no heavy ML pipeline):
+1. User pastes/types a requirement in a text box on the React frontend and hits "Find Standards."
+2. Frontend POSTs the text to an Express endpoint: POST /api/recommend
+3. Backend endpoint:
+   a. Fetches the full seed "standards" collection from MongoDB (small dataset, so no vector DB needed for MVP)
+   b. Builds a single Gemini API prompt containing: the user's input text + the full list of standards (as JSON) + strict instructions to ONLY select from the given list (never invent a standard number), and to return strict JSON with: matchedStandards (array of standardNumber), confidenceScore (0-1), reasoning (short plain-language explanation), certificationFlags (array), needsReview (true if confidenceScore < 0.6 or input is too vague)
+   c. Calls Gemini API with this prompt, parses the JSON response (wrap in try/catch — if parsing fails, retry once, then return a graceful error)
+   d. Saves the query + result to the "queries" collection
+   e. Returns the structured result to the frontend
+4. Frontend displays results as cards: standard number + title, test methods, certification badges, confidence score (color-coded: green >0.8, yellow 0.6-0.8, red <0.6 with a "Needs human review" tag), and the reasoning text.
+5. Add a simple "Recent Queries" page/section (GET /api/queries) showing the audit log — this maps to the "transparent audit trail" point in the pitch.
+
+WHAT NOT TO BUILD (out of scope for MVP, skip entirely):
+- No vector database (Qdrant/FAISS/Neo4j) — the curated MongoDB list + Gemini prompt is the whole "retrieval" for this MVP
+- No BM25/embeddings/re-ranker/IndicBERT — Gemini's own reasoning over the provided list stands in for this
+- No multilingual translation layer (IndicTrans2/Bhashini) — English-only input for MVP
+- No authentication/login system unless trivially easy — this is a demo prototype
+- No microservices — single Express backend is fine
+
+PROJECT STRUCTURE (so it's easy to extend later):
+/client — React app (components: SearchForm, ResultCard, RecentQueries, App)
+/server — Express app (routes/recommend.js, routes/queries.js, models/Standard.js, models/QueryLog.js, services/geminiService.js, seed/seedStandards.js)
+Use environment variables for MONGODB_URI and GEMINI_API_KEY (never hardcode).
+
+DELIVERABLE:
+A working, runnable MVP where I can type a procurement requirement, click a button, and see matched Indian Standards with confidence scores and certification flags, plus a recent-queries audit log page. Keep the UI clean and simple — functionality over polish, since I'll be extending this myself afterward.
