@@ -1,12 +1,12 @@
 ﻿# DevOrigin Standards Recommender
 
-A Smart India Hackathon prototype that maps plain-language procurement requirements to illustrative Indian Standards, certification flags, and an audit trail. The visual design is retained while the backend now uses MongoDB/Mongoose and calls Gemini from the server only.
+A Smart India Hackathon prototype that maps plain-language procurement requirements to illustrative Indian Standards, certification flags, and an audit trail. On Netlify, the backend runs as a serverless function, stores the audit trail in Netlify Database, and calls Gemini through Netlify AI Gateway.
 
 ## Requirements
 
 - Node.js 20.19 or newer and npm
-- MongoDB running locally or a MongoDB Atlas URI
-- A Google Gemini API key to create recommendations
+- MongoDB and a Google Gemini API key are needed only for the legacy local Express workflow
+- Netlify automatically provisions the deployed database and AI Gateway credentials
 
 ## Setup
 
@@ -37,6 +37,10 @@ Open the Vite address shown in the terminal (normally `http://localhost:5173`). 
 | `CLIENT_ORIGIN` | No | `http://localhost:5173` | Allowed browser origin for CORS |
 
 If the Gemini key is missing, the API stays available for health, standards, and query reads; recommendation requests return a clear `503` error.
+
+## Netlify deployment
+
+The deployed `/api/*` routes are served by `netlify/functions/api.mts`. Netlify Database applies the checked-in migrations automatically and provides isolated database branches for deploy previews. Gemini recommendations use Netlify AI Gateway with the supported `gemini-3.6-flash` model by default, so provider credentials are not exposed to the browser.
 
 ## Scripts
 
